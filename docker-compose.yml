@@ -1,0 +1,23 @@
+version: '3.8'
+
+services: 
+
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+
+  llm-app:
+    build: 
+      context: ./llm
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./llm:/app
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_RUN_HOST=0.0.0.0
+      - PORT=5000
+    depends_on:
+      - ollama

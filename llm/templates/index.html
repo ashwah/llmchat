@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Web App</title>
+</head>
+<body>
+    <form method="POST">
+        <label for="input_text">Enter text:</label>
+        <input type="text" id="input_text" name="input_text">
+        <button type="submit">Submit</button>
+    </form>
+    {% if response_text %}
+    <div>{{ response_text }}</div>
+    {% endif %}
+</body>
+</html>

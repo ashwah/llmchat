@@ -1,0 +1,6 @@
+.docker_*
+web/node_modules
+llm/__pycache__
+llm/chroma_db
+llm/llm-env
+llm-app-ollama.tar
