@@ -5,16 +5,26 @@ services:
   ollama:
     image: ollama/ollama
     ports:
-      - "11434:11434"
+      - 11434:11434
+    volumes:
+      - ./ollama:/root/.ollama
+    container_name: ollama
+    # pull_policy: always
+    # tty: true
+    # restart: always
+    # environment:
+    #   - OLLAMA_KEEP_ALIVE=24h
+    #   - OLLAMA_HOST=0.0.0.0
 
-  llm-app:
+  app:
     build: 
-      context: ./llm
+      context: ./app
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
     volumes:
-      - ./llm:/app
+      - ./app:/app
+    container_name: app
     environment:
       - FLASK_APP=app.py
       - FLASK_RUN_HOST=0.0.0.0
