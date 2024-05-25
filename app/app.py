@@ -1,7 +1,10 @@
 from flask import Flask, request, jsonify
 from langchain_community.llms import Ollama
 from langchain_community.embeddings import OllamaEmbeddings
+from langchain.chains import ConversationChain
 from langchain_chroma import Chroma
+from langchain.chains.conversation.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import SQLChatMessageHistory
 # from langchain_community.vectorstores import Chroma
 
 import uuid
@@ -20,13 +23,31 @@ ollama_embeddings = OllamaEmbeddings(base_url=ollama_url, model="nomic-embed-tex
 # Set up Chroma database
 client = chromadb.HttpClient(host="localhost", port=8000)
 
-
 # Create a Langchain Chroma database and add some text documents.
 db_chroma = Chroma(
     client=client,
     collection_name=collection_name,
     embedding_function=ollama_embeddings,
 )
+
+connection_string = f"sqlite:///C:/Users/ashwa/Documents/VS Code/BBros/chroma/chroma.sqlite3"
+
+chat_message_history = SQLChatMessageHistory(
+    session_id="test_session", connection_string=connection_string
+)
+
+memory = ConversationBufferMemory(
+    chat_memory=chat_message_history,
+    return_messages=True,
+)
+
+conversation = ConversationChain(
+    llm=llm,
+    memory=memory
+)
+
+history = conversation.memory.load_memory_variables(inputs=[])['history']
+# print(history)
 
 # Load chat data
 @app.route("/chat/<chat_id>/load", methods=["GET"])
@@ -76,18 +97,11 @@ def converse(chat_id):
     user_id = user_input["user_id"]
     message_body = user_input["message"]["body"]
 
-    # message_doc = {
-    #     "chat_id": chat_id,
-    #     "message_id": "551e87f4-1cfa-49a4-8f4d-65c7a6f23e9a",
-    #     "user": "936da01f-9abd-4d9d-80c7-02af85c822a8",
-    #     "timestamp": datetime.datetime.now(),
-    #     "body": message_body
-    # }
 
-    # db_chroma.insert("messages", message_doc)
+    response = conversation.invoke(message_body)
 
-    # Generate response from LLM
-    response = llm.invoke(message_body)
+    # metadata = conversation.memory.load_memory_variables(inputs=[])
+    # print(metadata)
 
     # Create a new message object
     message_id = uuid.uuid4()
@@ -96,11 +110,8 @@ def converse(chat_id):
         "message_id": str(message_id),
         "user": "LLM",
         "timestamp": timestamp,
-        "body": response
+        "body": response['response']
     }
-
-    # Add message to chat history
-    #db.add_message_to_chat(chat_id, message)
 
     return jsonify(message)
 
