@@ -1,6 +1,6 @@
 .docker_*
 app/node_modules
-app/__pycache__
+__pycache__
 app/chroma_db
 app/llm-env
 app-env/
