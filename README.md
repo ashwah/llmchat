@@ -48,6 +48,8 @@ Passing the volume definition allows you to store the vector store outside of th
 
 `docker run -e "ALLOW_RESET=TRUE" -e "IS_PERSISTENT=TRUE" -d -v ${PWD}/chroma:/chroma/chroma -p 8000:8000 --name chroma chromadb/chroma`
 
+You should be able to visit `http://localhost:8000/api/v1` to see that the server is running. 
+
 
 ### 3. Run the app 
 
