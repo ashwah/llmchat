@@ -1,14 +1,81 @@
 # BBros LLM foundation app
 
-## Installation
+## Installation steps
 
-1. Run `docker-composer up`
-2. In Docker Decktop go into the 'Olama-1' container and got to the "Exec" tabs, here you can run Ollama commands to get the necessary models.
-3. In Ollama-1, run `ollama pull phi3`. Then run `ollama pull nomic-embed-text`.
-4. Should be albe to go to 'http://localhost:5000/chat/123123123/load'
+Steps for local development.
 
 
-## Note
+### 1. Start an Ollama server
+
+Ash: The Ollama server was behaving strangely on my machine, so an alterative was to just run the native windows version of the Ollama server. The key thing is to get a server running on localhost.
+
+
+#### Pull docker ollama
+
+`docker pull ollama/ollama`
+
+
+#### Run the Ollama container 
+
+Passing the volume definition allows you to store the models outside of the container. This is useful if you want to delete the container (e.g. for an upgrade) and you want to keep your downloaded models.
+
+`docker run -d -v ${PWD}/ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama`
+
+After this point you should be able to see the server on `localhost:11434`
+
+
+#### Download the models 
+
+Run this wherever Ollama is running, e.g. in the docker container to download the models. 
+
+Note 'phi3' is a relatively small LLM model. The 'nomic-embed-text' is the embedding model.
+
+`ollama pull phi3` 
+`ollama pull nomic-embed-text` 
+
+
+
+### 2. Start a Chroma server
+
+#### Pull Docker image
+
+`docker pull chromadb/chroma`
+
+
+#### Run the Chroma DB server
+
+Passing the volume definition allows you to store the vector store outside of the container. I.e. in ./chroma. If it's not there this will be created when the app runs.
+
+`docker run -e "ALLOW_RESET=TRUE" -e "IS_PERSISTENT=TRUE" -d -v ${PWD}/chroma:/chroma/chroma -p 8000:8000 --name chroma chromadb/chroma`
+
+
+### 3. Run the app 
+
+Create a venv (virtual environment).
+
+`python -m venv app-env`
+
+Start the venv (windows powershell)
+
+`.\app-env\Scripts\activate.ps1`
+
+Install dependencies
+
+`pip install -r app\requirements.txt`
+
+Run the app
+
+`flask --app app\app.py run --reload`
+
+
+## Script notes - app/chromatest.py 
+
+This script gives a simple demonstration of adding the embeddings of some texts samples into a vector store.
+
+
+
+
+## General Notes
 
 ### build the image
 docker build -f OllamaDockerfile -t ashley-g/llm-app .
@@ -33,3 +100,9 @@ pip freeze
 
 ### run the python app with reloading
 flask --app app.py run --reload
+
+### create and start the python venv (activate command is windows only)
+python -m venv app-env
+.\app-env\Scripts\activate.ps1
+
+

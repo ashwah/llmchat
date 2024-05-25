@@ -3,5 +3,7 @@ app/node_modules
 app/__pycache__
 app/chroma_db
 app/llm-env
+app-env/
 ollama
+chroma/
 llm-app-ollama.tar
