@@ -1,4 +1,5 @@
 .docker_*
+.vscode
 app/node_modules
 __pycache__
 app/chroma_db
