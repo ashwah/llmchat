@@ -1,39 +1,52 @@
 from flask import jsonify
 
+from langchain_community.chat_message_histories import SQLChatMessageHistory
+from langchain_core.messages import AIMessage, HumanMessage
+
+import json
+
 def load_chat(chat_id):
-    # Hard-coded sample chat data
+
+    # Prepare the chat data to be returned.
     chat_data = {
         "conversation": {
             "converation_id": chat_id,
             "title": "My Chat Conversation",
-            "created_at": "2023-02-20T14:30:00Z"
+            "created_at": "123123123"
         },
-        "history": [
-            {
-                "message_id": "551e87f4-1cfa-49a4-8f4d-65c7a6f23e9a",
-                "user": "936da01f-9abd-4d9d-80c7-02af85c822a8",
-                "timestamp": "2023-02-20T14:30:05Z",
-                "body": "Hello, how are you?"
-            },
-            {
-                "message_id": "2f3a4c21-5b6d-49f2-83c5-1234567890ab",
-                "user": "LLM",
-                "timestamp": "2023-02-20T14:30:10Z",
-                "body": "Hello! I'm doing well, thanks for asking. How can I assist you today?"
-            },
-            {
-                "message_id": "8a3b2c11-4d5e-6f7g-8h9i-0123456789cd",
-                "user": "936da01f-9abd-4d9d-80c7-02af85c822a8",
-                "timestamp": "2023-02-20T14:30:15Z",
-                "body": "I'm looking for information on AI and machine learning."
-            },
-            {
-                "message_id": "4e5f6g7h-8i9j-1k2l-3m4n-0123456789ef",
-                "user": "LLM",
-                "timestamp": "2023-02-20T14:30:20Z",
-                "body": "Fascinating topics! I can provide you with an overview of AI and ML, as well as some resources to get you started."
-            }
-        ] 
+        "history": [] 
     }
+
+    # Connection string for the SQLite database.
+    connection_string = f"sqlite:///C:/Users/ashwa/Documents/VS Code/BBros/chroma/chroma.sqlite3"
+
+    # Create a SQL chat message history object based on the current chat ID.
+    chat_message_history = SQLChatMessageHistory(
+        session_id=chat_id, 
+        connection_string=connection_string,
+    )
+
+    # Get the messages from the chat message history.
+    for message in chat_message_history.messages:
+
+        if isinstance(message, HumanMessage):
+            user = message.name
+            body = message.content
+
+
+        elif isinstance(message, AIMessage):
+            user = "AI-Guy"
+            data = json.loads(message.content)
+            body = data["response"]
+
+        new_message = {
+            "message_id": "123456",
+            "timestamp": "654321",
+            "user": user,
+            "body": body
+        }
+
+        chat_data["history"].append(new_message)
+
 
     return jsonify(chat_data)
