@@ -12,7 +12,7 @@ ollama_embeddings = OllamaEmbeddings(base_url=ollama_url, model="nomic-embed-tex
 # Create a Chroma client on out hosted ChromaDB instance. Optionally, uncomment the reset() 
 # method to clear the database. 
 client = chromadb.HttpClient(host="localhost", port=8000)
-#client.reset()
+# client.reset()
 
 
 # Create a Langchain Chroma database and add some text documents.
@@ -22,23 +22,35 @@ db_chroma = Chroma(
     embedding_function=ollama_embeddings,
 )
 
-texts = [
-    "A list of 10 things that can inspire creativity.",
-    "The importance of perseverance in achieving long-term goals.",
-    "The role of mentorship in fostering personal and professional growth.",
-    "The benefits of curiosity and the pursuit of knowledge.",
-    "The power of collaboration in problem-solving and innovation.",
-    "The importance of work-life balance for overall well-being.",
-    "The impact of emotional intelligence on leadership effectiveness.",
-    "The value of integrity and ethical conduct in all aspects of life.",
-    "The significance of setting goals and taking action towards them.",
-    "The transformative potential of learning new skills and knowledge throughout life."
+chat1 = [
+    "Cats can jump up to six times their own body length.",
+    "Cats have excellent night vision and can see in very low light.",
+    "Cats purr not just when they're happy, but also when they're injured or seeking comfort.",
+    "Cats spend an average of 15 hours a day sleeping or napping.",
+    "Some cat breeds, like the Sphynx, have very little fur.",
+    "Dogs are known for their loyalty and companionship.",
+    "Dogs come in a variety of breeds, each with unique characteristics.",
+    "Dogs have been domesticated for thousands of years.",
+    "Training and socialization are important for a well-behaved dog.",
+    "Many people consider dogs to be part of their family.",
 ]
-#db_chroma.add_texts(texts=texts)
+meta1 = [
+    {"chat_id": 123},
+    {"chat_id": 123},
+    {"chat_id": 123},
+    {"chat_id": 123},
+    {"chat_id": 123},
+    {"chat_id": 456},
+    {"chat_id": 456},
+    {"chat_id": 456},
+    {"chat_id": 456},
+    {"chat_id": 456},
+]
+# db_chroma.add_texts(texts=chat1, metadatas=meta1)
 
 # query the DB
-query = "I find it difficult to manage my work life and personal life"
-docs = db_chroma.similarity_search_with_score(query, 5)
+query = "leaping animal"
+docs = db_chroma.similarity_search_with_score(query, 3, filter={"chat_id": 456})
 
 # print results
 for doc in docs:
