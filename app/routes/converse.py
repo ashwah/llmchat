@@ -67,11 +67,12 @@ def converse(chat_id):
         Current conversation:
         {history}
         
-        Human ("""
-        + user_id +
-        """) : {input}
+        Human ({user_id}): {input}
         """
     )
+
+    # Fill in the prompt with the user ID.
+    prompt = prompt.partial(user_id=user_id)
 
     conversation = ConversationChain(
         llm=llm,

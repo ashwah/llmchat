@@ -34,7 +34,7 @@ def load_chat(chat_id):
             body = message.content
 
 
-        elif isinstance(message, AIMessage):
+        if isinstance(message, AIMessage):
             user = "AI-Guy"
             data = json.loads(message.content)
             body = data["response"]
