@@ -46,7 +46,7 @@ meta1 = [
     {"chat_id": 456},
     {"chat_id": 456},
 ]
-# db_chroma.add_texts(texts=chat1, metadatas=meta1)
+#db_chroma.add_texts(texts=chat1, metadatas=meta1)
 
 # query the DB
 query = "leaping animal"
