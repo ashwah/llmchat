@@ -8,3 +8,4 @@ app-env/
 ollama
 chroma/
 llm-app-ollama.tar
+.env

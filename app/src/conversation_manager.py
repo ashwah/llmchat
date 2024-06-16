@@ -1,26 +1,31 @@
-
 from flask import request, jsonify
-from langchain.chains import ConversationChain
 from langchain_chroma import Chroma
-from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.llms import Ollama
-from langchain_core.messages import AIMessage, HumanMessage
 from langchain.prompts import PromptTemplate
 from history_retriever import HistoryRetriever
+from dotenv import load_dotenv
 
+import os
 import chromadb
 import datetime
-import json
 import uuid
 
+load_dotenv()
+
+# Get env variables that are set in app/.env.
+ollama_host = os.environ.get('OLLAMA_HOST')
+ollama_port = os.environ.get('OLLAMA_PORT')
+chroma_host = os.environ.get('CHROMA_HOST')
+chroma_port = os.environ.get('CHROMA_PORT')
+
 # Set up Ollama LLM, embedding model and Chroma database.
-ollama_url = "http://localhost:11434"
+ollama_url = f"http://{ollama_host}:{ollama_port}"
 ollama_embeddings = OllamaEmbeddings(base_url=ollama_url, model="nomic-embed-text")
 llm = Ollama(base_url=ollama_url, model="llama3")
 
 # Create a Chroma client on out hosted ChromaDB instance.
-client = chromadb.HttpClient(host="localhost", port=8000)
+client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
 
 # Set a collection name for the Chroma database.
 collection_name="chat_history"
@@ -32,159 +37,105 @@ chroma_db = Chroma(
     embedding_function=ollama_embeddings,
 )
 
-def do_stuff():
-
-    user_message = "Hello, how are you?"
-    chat_id = "123456"
+def process_new_message(chat_id, user_id, message_body):
 
     # Retrieve any relavent previous conversation.
     reciever = HistoryRetriever(chroma_db=chroma_db, chat_id=chat_id)
-    relevant_history = reciever.invoke("hello")
+    relevant_history = reciever.invoke(message_body)
 
+    # Ensure the history is sorted by timestamp.
+    sorted_history = sorted(relevant_history, key=lambda x: x[0].metadata['timestamp'])
 
-    # Combine the previous conversation with the user message.
+    history = []
+    for history_item in sorted_history:
+        message = history_item[0].page_content 
+        user = history_item[0].metadata["user_id"]
+        timestamp = history_item[0].metadata["timestamp"] 
+        # Concat the message with the user and timestamp
+        history.append(f"User {user}: {message} (At: {timestamp})")
 
-    # Process the new message.
+    metadata = {
+        "chat_id": chat_id, 
+        "user_id": user_id,
+        "timestamp": int(datetime.datetime.now().timestamp()),
+        "message_id": str(uuid.uuid4()),
+    }
+    
+    chroma_db.add_texts(texts=[message_body], metadatas=[metadata])
 
-
-    # Add the new message to the conversation history.
-
-
-    db_chroma.add_texts(texts=[user_message], metadatas=[{"chat_id": chat_id}])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Connection string for the SQLite database.
-# connection_string = f"sqlite:///C:/Users/ashwa/Documents/VS Code/BBros/chroma/chroma.sqlite3"
-
-# def process_new_message(chat_id, user_id, message_body):
-#         # Create a SQL chat message history object based on the current chat ID.
-#     chat_message_history = SQLChatMessageHistory(
-#         session_id=chat_id, 
-#         connection_string=connection_string,
-#     )
-
-#     memory = MultipersonConversationBufferMemory(
-#         chat_memory=chat_message_history,
-#         return_messages=True,
-#         name=user_id,
-#     )
-
-#     # Set the user ID as the "name" in the memory object.
-#     memory.set_name(user_id)
-
-#     prompt = PromptTemplate.from_template(
-#         """
-#         This is a multiple participant chat between multiple humans and an LLM. It is critical you 
-#         evaluate the most recent human input below and decide whether or not your response is needed. 
-#         ONLY RESPOND with a non empty response if the humans address you directly as "AI-Guy".
-#         Sometimes the human participants talk to each other, if they are, you must give an empty response.
+    prompt = PromptTemplate.from_template(
+        """
+        You are an AI assistant called AI-Guy that helps users with their questions. The current user 
+        input is as follows: 
         
-#         If you decide a response from the AI is relevant, please respond with concise, short answers.
+        {input}
 
-#         You are also provided with the current conversation history below. Please use this to inform your response, 
-#         including questions about who is in the chat.
+        This is the relevant chat history, keep this in mind but don't comment that this was provided:
         
-#         An empty response must look like:
-        
-#         {{ 
-#             "response": "",
-#             "info": "This is a place to put any info e.g. an explanation why you didn't response." 
-#         }}
+        {history}
+        """
+    )
 
-#         And a regular JSON response should look like:
+    prompt_with_subs = prompt.invoke({"input": message_body, "history": relevant_history});
 
-#         {{ 
-#             "response": "This is my response.",
-#             "info": "This is a place to put any additional info."  
-#         }}
-        
-#         Current conversation:
-#         {history}
-        
-#         Human ({user_id}): {input}
-#         """
-#     )
+    # Converse with the LLM
+    response = llm.invoke(prompt_with_subs)
+    
+    metadata = {
+        "chat_id": chat_id, 
+        "user_id": "AI-Guy",
+        "timestamp": int(datetime.datetime.now().timestamp()),
+        "message_id": str(uuid.uuid4()),
+    }
+    
+    chroma_db.add_texts(texts=[response], metadatas=[metadata])
 
-#     # Fill in the prompt with the user ID.
-#     prompt = prompt.partial(user_id=user_id)
+    message = {
+        "message_id": metadata["message_id"],
+        "user": "LLM",
+        "timestamp": metadata["timestamp"],
+        "body": response
+    }
 
-#     conversation = ConversationChain(
-#         llm=llm,
-#         memory=memory,
-#         prompt=prompt,
-#     )
+    return jsonify(message)
 
-#     # Converse with the LLM
-#     response = conversation.invoke(message_body)
+def load_chat(chat_id):
+    # Prepare the chat data to be returned.
+    chat_data = {
+        "conversation": {
+            "converation_id": chat_id,
+            "title": "My Chat Conversation",
+            "created_at": "123123123"
+        },
+        "history": [] 
+    }
 
-#     # Create a new message object
-#     message_id = uuid.uuid4()
-#     timestamp = datetime.datetime.now().isoformat()
-#     message = {
-#         "message_id": str(message_id),
-#         "user": "LLM",
-#         "timestamp": timestamp,
-#         "body": response['response']
-#     }
-
-#     return jsonify(message)
-
-# def load_chat_from_database(chat_id):
-#     # Prepare the chat data to be returned.
-#     chat_data = {
-#         "conversation": {
-#             "converation_id": chat_id,
-#             "title": "My Chat Conversation",
-#             "created_at": "123123123"
-#         },
-#         "history": [] 
-#     }
-
-#     # Create a SQL chat message history object based on the current chat ID.
-#     chat_message_history = SQLChatMessageHistory(
-#         session_id=chat_id, 
-#         connection_string=connection_string,
-#     )
-
-#     # Get the messages from the chat message history.
-#     for message in chat_message_history.messages:
-
-#         if isinstance(message, HumanMessage):
-#             user = message.name
-#             body = message.content
+    collection = client.get_collection(name=collection_name)
+    chat_message_history = collection.get(where={"chat_id": chat_id})
 
 
-#         if isinstance(message, AIMessage):
-#             user = "AI-Guy"
-#             data = json.loads(message.content)
-#             body = data["response"]
+    history = []
 
-#         new_message = {
-#             "message_id": "123456",
-#             "timestamp": "654321",
-#             "user": user,
-#             "body": body
-#         }
+    # Get the messages from the chat message history.
+    for key, message in enumerate(chat_message_history["documents"]):
 
-#         chat_data["history"].append(new_message)
+        metadata = chat_message_history["metadatas"][key]
+        user = metadata["user_id"]
+        timestamp = metadata["timestamp"]
+        message_id = metadata["message_id"]
+
+        new_message = {
+            "message_id": message_id,
+            "timestamp": timestamp,
+            "user": user,
+            "body": message
+        }
+
+        history.append(new_message)
 
 
-#     return jsonify(chat_data)
+    sorted_history = sorted(history, key=lambda x: x['timestamp'])
+
+    chat_data["history"] = sorted_history
+
+    return jsonify(chat_data)

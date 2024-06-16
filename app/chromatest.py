@@ -3,10 +3,10 @@ from langchain_chroma import Chroma
 
 import chromadb
 
-collection_name="my_collection"
+collection_name="chat_history"
 
 # Set up Ollama LLM, embedding model and Chroma database.
-ollama_url = "http://localhost:11434"
+ollama_url = "http://192.168.100.62:11434"
 ollama_embeddings = OllamaEmbeddings(base_url=ollama_url, model="nomic-embed-text")
 
 # Create a Chroma client on out hosted ChromaDB instance. Optionally, uncomment the reset() 
@@ -49,8 +49,8 @@ meta1 = [
 #db_chroma.add_texts(texts=chat1, metadatas=meta1)
 
 # query the DB
-query = "leaping animal"
-docs = db_chroma.similarity_search_with_score(query, 3, filter={"chat_id": 456})
+query = "animals"
+docs = db_chroma.similarity_search_with_score(query, 10, filter={"chat_id": "123464"})
 
 # print results
 for doc in docs:
